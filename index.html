@@ -47,7 +47,7 @@ const LANG = {
     score:'分數', level:'等級', levelUp:'等級提升！',
     gameOver:'遊戲結束', finalScore:'最終得分',
     playAgain:'再次挑戰', menu:'回主選單', ruleTitle:'道具一覽',
-    touch:'滑動控制城堡',
+    touch:'滑動控制城堡', islandBtn:'🏝  回到島嶼',
     rules:[
       {e:'👑',t:'王冠  +30',good:true},
       {e:'🪙',t:'金幣  +10',good:true},
@@ -62,7 +62,7 @@ const LANG = {
     score:'Score', level:'Level', levelUp:'Level Up!',
     gameOver:'Game Over', finalScore:'Final Score',
     playAgain:'Play Again', menu:'Main Menu', ruleTitle:'Item Guide',
-    touch:'Slide to move castle',
+    touch:'Slide to move castle', islandBtn:'🏝  Back to Island',
     rules:[
       {e:'👑',t:'Crown  +30',good:true},
       {e:'🪙',t:'Coin   +10',good:true},
@@ -375,7 +375,7 @@ function drawLangBtn(){
 // ── 게임 State ───────────────────────────────────────────────────
 let state='menu'; // menu | game | gameover
 // 按鈕實際座標（由 draw 函式每幀更新，確保點擊永遠準確）
-const HIT = { startY:0, againY:0, menuY:0 };
+const HIT = { startY:0, againY:0, menuY:0, islandY:0 };
 let score=0, level=1, gameOverScore=0;
 let playerX=W/2, playerY=H-200;
 let dropItems=[];
@@ -450,6 +450,10 @@ function onClick(e){
     // 用 HIT.startY（每幀由 drawMenu 更新），加大容錯範圍
     if(HIT.startY>0 && x>W/2-280 && x<W/2+280 && y>HIT.startY-80 && y<HIT.startY+80){
       startGame(); return;
+    }
+    // 回到島嶼按鈕
+    if(HIT.islandY>0 && x>W/2-250 && x<W/2+250 && y>HIT.islandY-60 && y<HIT.islandY+60){
+      window.open('https://videodennischiu-oss.github.io/island-adventure/','_blank'); return;
     }
   } else if(state==='gameover'){
     if(HIT.againY>0 && x>W/2-280 && x<W/2+280 && y>HIT.againY-80 && y<HIT.againY+80){
@@ -549,6 +553,33 @@ function drawMenu(){
 
   // touch hint
   text(T().touch,W/2,cY+cH/2+30,38,COL.silver);
+
+  // ── 回到島嶼按鈕（卡片外，底部）
+  const iY = cY+cH/2+130;
+  HIT.islandY = iY;
+  const iW=460, iH=86;
+  // 半透明深色底
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=14; ctx.shadowOffsetY=5;
+  roundRect(ctx,W/2-iW/2,iY-iH/2,iW,iH,43);
+  const iGrad=ctx.createLinearGradient(W/2-iW/2,iY-iH/2,W/2-iW/2,iY+iH/2);
+  iGrad.addColorStop(0,'rgba(40,30,10,0.88)');
+  iGrad.addColorStop(1,'rgba(20,14,4,0.88)');
+  ctx.fillStyle=iGrad; ctx.fill();
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  // 上亮邊
+  const hiI=ctx.createLinearGradient(W/2-iW/2,iY-iH/2,W/2-iW/2,iY-iH/2+iH*0.35);
+  hiI.addColorStop(0,'rgba(255,240,160,0.12)'); hiI.addColorStop(1,'rgba(255,240,160,0)');
+  roundRect(ctx,W/2-iW/2+2,iY-iH/2+2,iW-4,iH*0.35,38); ctx.fillStyle=hiI; ctx.fill();
+  // 金色虛線邊框
+  const sgI=ctx.createLinearGradient(W/2-iW/2,iY-iH/2,W/2-iW/2,iY+iH/2);
+  sgI.addColorStop(0,'rgba(220,190,100,0.75)'); sgI.addColorStop(1,'rgba(120,90,20,0.5)');
+  roundRect(ctx,W/2-iW/2,iY-iH/2,iW,iH,43);
+  ctx.setLineDash([8,6]); ctx.strokeStyle=sgI; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  // 文字
+  textStroke(T().islandBtn,W/2,iY-26,42,'#e8d08a','#1a0e00',3,'center','bold');
 
   drawLangBtn();
 }
