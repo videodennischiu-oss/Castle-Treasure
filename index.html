@@ -374,6 +374,8 @@ function drawLangBtn(){
 
 // ── 게임 State ───────────────────────────────────────────────────
 let state='menu'; // menu | game | gameover
+// 按鈕實際座標（由 draw 函式每幀更新，確保點擊永遠準確）
+const HIT = { startY:0, againY:0, menuY:0 };
 let score=0, level=1, gameOverScore=0;
 let playerX=W/2, playerY=H-200;
 let dropItems=[];
@@ -417,7 +419,10 @@ function drawSprite(key,x,y,w,h,angle=0){
 function getPos(e){
   const r=canvas.getBoundingClientRect();
   const scaleX=W/r.width, scaleY=H/r.height;
-  const src=e.touches?e.touches[0]:e;
+  // touchend 時 e.touches 是空的，要用 changedTouches
+  const src = (e.changedTouches && e.changedTouches.length)
+    ? e.changedTouches[0]
+    : (e.touches && e.touches.length ? e.touches[0] : e);
   return {x:(src.clientX-r.left)*scaleX, y:(src.clientY-r.top)*scaleY};
 }
 
@@ -442,13 +447,17 @@ function onClick(e){
     lang=lang==='zh'?'en':'zh'; return;
   }
   if(state==='menu'){
-    const btnY=H/2+330;
-    if(x>W/2-260 && x<W/2+260 && y>btnY-50 && y<btnY+50) startGame();
+    // 用 HIT.startY（每幀由 drawMenu 更新），加大容錯範圍
+    if(HIT.startY>0 && x>W/2-280 && x<W/2+280 && y>HIT.startY-80 && y<HIT.startY+80){
+      startGame(); return;
+    }
   } else if(state==='gameover'){
-    const ay=H/2+260;
-    if(x>W/2-260 && x<W/2+260 && y>ay-50 && y<ay+50){startGame();return;}
-    const my=H/2+380;
-    if(x>W/2-200 && x<W/2+200 && y>my-40 && y<my+40){state='menu';return;}
+    if(HIT.againY>0 && x>W/2-280 && x<W/2+280 && y>HIT.againY-80 && y<HIT.againY+80){
+      startGame(); return;
+    }
+    if(HIT.menuY>0 && x>W/2-220 && x<W/2+220 && y>HIT.menuY-80 && y<HIT.menuY+60){
+      state='menu'; return;
+    }
   }
 }
 
@@ -532,6 +541,7 @@ function drawMenu(){
   const btnY=cY+cH/2-140;
   const pulse=0.82+Math.sin(Date.now()*0.0022)*0.18;
   const btnW=500,btnH=96;
+  HIT.startY = btnY; // 記錄實際 Y 給 onClick 用
   drawBtn3D(W/2-btnW/2,btnY-btnH/2,btnW,btnH,48);
   ctx.save(); ctx.globalAlpha=pulse;
   textStroke(T().start,W/2,btnY-26,60,'#2a1800','#0b0b0f',2,'center','bold');
@@ -676,6 +686,7 @@ function drawGameOver(){
   // play again btn
   const ay=cY+cH/2-162;
   const pulse=0.82+Math.sin(Date.now()*0.0022)*0.18;
+  HIT.againY = ay; // 記錄實際 Y
   drawBtn3D(W/2-250,ay-48,500,96,48);
   ctx.save(); ctx.globalAlpha=pulse;
   textStroke(T().playAgain,W/2,ay-26,58,'#2a1800','#0b0b0f',2,'center','bold');
@@ -683,6 +694,7 @@ function drawGameOver(){
 
   // menu link
   const my=cY+cH/2-58;
+  HIT.menuY = my; // 記錄實際 Y
   text(T().menu,W/2,my-22,46,COL.silver);
   ctx.save(); ctx.globalAlpha=0.45; ctx.strokeStyle=COL.silver; ctx.lineWidth=1;
   const mw=ctx.measureText(T().menu).width;
