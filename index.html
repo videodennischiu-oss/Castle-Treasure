@@ -94,6 +94,13 @@ function tryStartBgm(){
 }
 document.addEventListener('pointerdown', tryStartBgm, {once:true});
 
+// 離開頁面 / 切換分頁時自動暫停音樂
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ bgm.pause(); }
+  else if(bgmStarted){ bgm.play().catch(()=>{}); }
+});
+window.addEventListener('pagehide', ()=>{ bgm.pause(); bgm.currentTime=0; });
+
 // ── 物件設定 ─────────────────────────────────────────────────────
 const ITEMS = {
   crown: {score:+30, type:'good'},
