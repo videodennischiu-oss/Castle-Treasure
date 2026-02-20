@@ -14,12 +14,41 @@ html,body{
 }
 canvas{
   display:block;
-  /* 保持 9:16，撐滿可視區 */
   max-height:100vh;
   max-width:calc(100vh * 9/16);
   width:100%;
   touch-action:none;
 }
+/* ── 開場影片覆蓋層 ── */
+#intro-overlay{
+  position:fixed; inset:0;
+  display:flex; justify-content:center; align-items:center;
+  background:#000;
+  z-index:9999;
+  transition:opacity 0.8s ease;
+}
+#intro-overlay.fade-out{ opacity:0; pointer-events:none; }
+#intro-video{
+  max-height:100vh;
+  max-width:calc(100vh * 9/16);
+  width:100%; height:100%;
+  object-fit:cover;
+}
+#skip-btn{
+  position:absolute; bottom:60px; right:40px;
+  padding:16px 36px;
+  background:rgba(10,8,4,0.72);
+  border:1.5px solid rgba(201,168,76,0.7);
+  border-radius:40px;
+  color:#e2c06a;
+  font-size:28px;
+  font-family:Georgia,serif;
+  cursor:pointer;
+  letter-spacing:2px;
+  backdrop-filter:blur(4px);
+  transition:background 0.2s, border-color 0.2s;
+}
+#skip-btn:hover{ background:rgba(201,168,76,0.18); border-color:#e2c06a; }
 </style>
 </head>
 <body>
@@ -75,6 +104,41 @@ const LANG = {
 };
 let lang = 'zh';
 const T = ()=>LANG[lang];
+
+// ── 🎬 開場影片控制 ────────────────────────────────────────────
+const introOverlay = document.getElementById('intro-overlay');
+const introVideo   = document.getElementById('intro-video');
+const skipBtn      = document.getElementById('skip-btn');
+let introFinished  = false;
+
+function endIntro(){
+  if(introFinished) return;
+  introFinished = true;
+  introVideo.pause();
+  introOverlay.classList.add('fade-out');
+  // 0.8s fade 後完全隱藏
+  setTimeout(()=>{ introOverlay.style.display='none'; }, 820);
+}
+
+// 影片播完自動結束
+introVideo.addEventListener('ended', endIntro);
+
+// Skip 按鈕
+skipBtn.addEventListener('click', endIntro);
+skipBtn.addEventListener('touchend', (e)=>{ e.preventDefault(); endIntro(); });
+
+// 影片載入失敗（沒有 intro.mp4）直接跳過，不卡關
+introVideo.addEventListener('error', ()=>{ introOverlay.style.display='none'; introFinished=true; });
+
+// 嘗試自動播放（需要 muted 才能自動播）
+introVideo.play().catch(()=>{
+  // 自動播放被擋，等用戶第一次點擊再播
+  const playOnTouch = ()=>{
+    introVideo.play().catch(()=>{ introOverlay.style.display='none'; introFinished=true; });
+    document.removeEventListener('pointerdown', playOnTouch);
+  };
+  document.addEventListener('pointerdown', playOnTouch);
+});
 
 // ── Canvas 設定 ──────────────────────────────────────────────────
 const W=1080, H=1920;
