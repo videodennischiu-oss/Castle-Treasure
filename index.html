@@ -106,38 +106,65 @@ let lang = 'zh';
 const T = ()=>LANG[lang];
 
 // ── 🎬 開場影片控制 ────────────────────────────────────────────
+// 影片結束後才啟動遊戲 loop，避免黑屏
 const introOverlay = document.getElementById('intro-overlay');
 const introVideo   = document.getElementById('intro-video');
 const skipBtn      = document.getElementById('skip-btn');
 let introFinished  = false;
+let gameLoopStarted = false;
+
+function startGameLoop(){
+  if(gameLoopStarted) return;
+  gameLoopStarted = true;
+  buildSprites();
+  loadImagesIfNeeded(()=>{ requestAnimationFrame(loop); });
+}
 
 function endIntro(){
   if(introFinished) return;
   introFinished = true;
   introVideo.pause();
   introOverlay.classList.add('fade-out');
-  // 0.8s fade 後完全隱藏
-  setTimeout(()=>{ introOverlay.style.display='none'; }, 820);
+  setTimeout(()=>{
+    introOverlay.style.display = 'none';
+    startGameLoop(); // 影片結束後才啟動遊戲
+  }, 820);
 }
 
-// 影片播完自動結束
+// 影片播完 → 結束
 introVideo.addEventListener('ended', endIntro);
 
 // Skip 按鈕
 skipBtn.addEventListener('click', endIntro);
 skipBtn.addEventListener('touchend', (e)=>{ e.preventDefault(); endIntro(); });
 
-// 影片載入失敗（沒有 intro.mp4）直接跳過，不卡關
-introVideo.addEventListener('error', ()=>{ introOverlay.style.display='none'; introFinished=true; });
+// 影片載入失敗 or 沒有 intro.mp4 → 立即跳過、直接啟動遊戲
+introVideo.addEventListener('error', ()=>{
+  introOverlay.style.display = 'none';
+  introFinished = true;
+  startGameLoop();
+});
 
-// 嘗試自動播放（需要 muted 才能自動播）
-introVideo.play().catch(()=>{
-  // 自動播放被擋，等用戶第一次點擊再播
-  const playOnTouch = ()=>{
-    introVideo.play().catch(()=>{ introOverlay.style.display='none'; introFinished=true; });
-    document.removeEventListener('pointerdown', playOnTouch);
-  };
-  document.addEventListener('pointerdown', playOnTouch);
+// 等 DOM ready 再播影片
+window.addEventListener('DOMContentLoaded', ()=>{
+  introVideo.play().catch(()=>{
+    // 自動播放被瀏覽器擋：顯示點擊提示，等用戶互動
+    const hint = document.createElement('div');
+    hint.textContent = '▶  點擊開始';
+    hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#e2c06a;font-size:48px;font-family:Georgia,serif;text-shadow:0 2px 12px #000;pointer-events:none;';
+    introOverlay.appendChild(hint);
+    const playOnce = ()=>{
+      hint.remove();
+      introVideo.play().catch(()=>{
+        // 還是播不了就直接跳過
+        introOverlay.style.display = 'none';
+        introFinished = true;
+        startGameLoop();
+      });
+      document.removeEventListener('pointerdown', playOnce);
+    };
+    document.addEventListener('pointerdown', playOnce);
+  });
 });
 
 // ── Canvas 設定 ──────────────────────────────────────────────────
@@ -820,11 +847,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 
-// ── BOOT ─────────────────────────────────────────────────────────
-buildSprites();
-loadImagesIfNeeded(()=>{
-  requestAnimationFrame(loop);
-});
+// ── BOOT: 由 startGameLoop() 在影片結束後呼叫，這裡不重複啟動 ──
 </script>
 </body>
 </html>
