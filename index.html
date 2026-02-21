@@ -52,6 +52,11 @@ canvas{
 </style>
 </head>
 <body>
+<!-- ══ 開場影片 (命名 intro.mp4，放同一資料夾) ══ -->
+<div id="intro-overlay">
+  <video id="intro-video" playsinline muted preload="auto" src="intro.mp4"></video>
+  <button id="skip-btn">SKIP ›</button>
+</div>
 <canvas id="c"></canvas>
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -106,13 +111,7 @@ let lang = 'zh';
 const T = ()=>LANG[lang];
 
 // ── 🎬 開場影片控制 ────────────────────────────────────────────
-// 影片結束後才啟動遊戲 loop，避免黑屏
-const introOverlay = document.getElementById('intro-overlay');
-const introVideo   = document.getElementById('intro-video');
-const skipBtn      = document.getElementById('skip-btn');
-let introFinished  = false;
 let gameLoopStarted = false;
-
 function startGameLoop(){
   if(gameLoopStarted) return;
   gameLoopStarted = true;
@@ -120,52 +119,57 @@ function startGameLoop(){
   loadImagesIfNeeded(()=>{ requestAnimationFrame(loop); });
 }
 
-function endIntro(){
-  if(introFinished) return;
-  introFinished = true;
-  introVideo.pause();
-  introOverlay.classList.add('fade-out');
-  setTimeout(()=>{
-    introOverlay.style.display = 'none';
-    startGameLoop(); // 影片結束後才啟動遊戲
-  }, 820);
+function initIntro(){
+  const overlay = document.getElementById('intro-overlay');
+  const video   = document.getElementById('intro-video');
+  const skip    = document.getElementById('skip-btn');
+
+  // 找不到元素（HTML沒插）→ 直接啟動遊戲
+  if(!overlay || !video){
+    startGameLoop();
+    return;
+  }
+
+  let done = false;
+  function endIntro(){
+    if(done) return;
+    done = true;
+    video.pause();
+    overlay.style.transition = 'opacity 0.7s';
+    overlay.style.opacity = '0';
+    setTimeout(()=>{ overlay.style.display='none'; startGameLoop(); }, 750);
+  }
+
+  video.addEventListener('ended', endIntro);
+  video.addEventListener('error', ()=>{ overlay.style.display='none'; startGameLoop(); });
+  if(skip) {
+    skip.addEventListener('click', endIntro);
+    skip.addEventListener('touchend', (e)=>{ e.preventDefault(); endIntro(); });
+  }
+
+  // 播影片
+  const p = video.play();
+  if(p && p.catch){
+    p.catch(()=>{
+      // 自動播放被擋 → 顯示點擊提示
+      const hint = document.createElement('div');
+      hint.textContent = '▶  點擊進入';
+      hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#e2c06a;font-size:52px;font-family:Georgia,serif;text-shadow:0 2px 16px #000;cursor:pointer;';
+      overlay.appendChild(hint);
+      overlay.addEventListener('pointerdown', ()=>{
+        hint.remove();
+        video.play().catch(()=>{ overlay.style.display='none'; startGameLoop(); });
+      }, {once:true});
+    });
+  }
 }
 
-// 影片播完 → 結束
-introVideo.addEventListener('ended', endIntro);
-
-// Skip 按鈕
-skipBtn.addEventListener('click', endIntro);
-skipBtn.addEventListener('touchend', (e)=>{ e.preventDefault(); endIntro(); });
-
-// 影片載入失敗 or 沒有 intro.mp4 → 立即跳過、直接啟動遊戲
-introVideo.addEventListener('error', ()=>{
-  introOverlay.style.display = 'none';
-  introFinished = true;
-  startGameLoop();
-});
-
-// 等 DOM ready 再播影片
-window.addEventListener('DOMContentLoaded', ()=>{
-  introVideo.play().catch(()=>{
-    // 自動播放被瀏覽器擋：顯示點擊提示，等用戶互動
-    const hint = document.createElement('div');
-    hint.textContent = '▶  點擊開始';
-    hint.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#e2c06a;font-size:48px;font-family:Georgia,serif;text-shadow:0 2px 12px #000;pointer-events:none;';
-    introOverlay.appendChild(hint);
-    const playOnce = ()=>{
-      hint.remove();
-      introVideo.play().catch(()=>{
-        // 還是播不了就直接跳過
-        introOverlay.style.display = 'none';
-        introFinished = true;
-        startGameLoop();
-      });
-      document.removeEventListener('pointerdown', playOnce);
-    };
-    document.addEventListener('pointerdown', playOnce);
-  });
-});
+// DOM 確保 ready 後執行
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initIntro);
+} else {
+  initIntro();
+}
 
 // ── Canvas 設定 ──────────────────────────────────────────────────
 const W=1080, H=1920;
