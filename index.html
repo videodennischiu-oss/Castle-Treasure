@@ -251,7 +251,7 @@ function buildSprites(){
   });
 
   // player castle
-  SPRITES.player = makeOffscreen(200,160,(c,pw,ph)=>{
+  SPRITES.player = makeOffscreen(600,480,(c,pw,ph)=>{
     // body
     c.fillStyle='#2c2010'; c.fillRect(14,46,pw-28,ph-46);
     c.fillStyle='#3d2e18'; c.fillRect(16,48,pw-32,ph-50);
@@ -728,7 +728,7 @@ function drawGame(dt){
 
   // player castle（自由移動）
   const sx=castleShake>0?(Math.random()-0.5)*castleShake:0;
-  drawSprite('player',playerX+sx,playerY,200,155);
+  drawSprite('player',playerX+sx,playerY,600,465);
   if(castleShake>0) castleShake=Math.max(0,castleShake-0.8);
 
   // floats
